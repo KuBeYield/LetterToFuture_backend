@@ -10,6 +10,9 @@ router.get('/main', lettersController.getMainData);
 // 편지 작성하기
 router.post('/letters/write', lettersController.writeLetter);
 
+// 편지 수신자 아이디 확인하기
+router.post('/letters/write/recipientIdCheck', lettersController.recipientIdCheck);
+
 // 편지 목록 조회하기
 router.get('/letters/archive', lettersController.getArchive);
 

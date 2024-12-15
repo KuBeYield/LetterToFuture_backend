@@ -103,6 +103,57 @@ exports.writeLetter = async (req, res) => {
     }
 };
 
+// 편지 수신자 아이디 확인하기
+exports.recipientIdCheck = async (req, res) => {
+    const authHeader = req.headers['authorization'];
+
+    // 인증 헤더 확인
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "인증이 필요합니다." });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+        // 토큰 검증 및 사용자 정보 추출
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "default_secret");
+
+        // 검색할 userId
+        const { userId } = req.body;
+        if (!userId || typeof userId !== 'string') {
+            return res.status(400).json({ message: 'userId는 필수 입력값입니다.' });
+        }
+
+        // MongoDB에서 검색 (정확히 일치, 시작, 포함)
+        const users = await User.find({
+            userId: { $regex: userId, $options: 'i' }, // 대소문자 구분 없이 검색
+        }).sort({ userId: 1 }); // 오름차순 정렬
+
+        const exactMatch = [];
+        const startsWith = [];
+        const includes = [];
+
+        users.forEach((user) => {
+            if (user.userId === userId) {
+                exactMatch.push(user.userId);
+            } else if (user.userId.startsWith(userId)) {
+                startsWith.push(user.userId);
+            } else if (user.userId.includes(userId)) {
+                includes.push(user.userId);
+            }
+        });
+
+        // 결과 반환
+        return res.status(200).json({
+            results: [...exactMatch, ...startsWith, ...includes],
+        });
+    } catch (err) {
+        console.error('Error during recipientIdCheck:', err);
+        return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    }
+};
+
+
 // 편지 목록 조회하기
 exports.getArchive = async (req, res) => {
     const authHeader = req.headers['authorization'];
